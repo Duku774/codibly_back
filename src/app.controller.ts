@@ -9,4 +9,9 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('endpoint1')
+  getThreeDays(): Promise<any> {
+    return this.appService.getThreeDays();
+  }
 }
