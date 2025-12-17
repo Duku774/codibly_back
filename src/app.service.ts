@@ -4,6 +4,8 @@ import {
   AvgCounter,
   DayAverage,
   DayCounter,
+  GenerationData,
+  OptimalCharge,
 } from './interfaces/generation.interface';
 
 @Injectable()
@@ -94,5 +96,57 @@ export class AppService {
     };
 
     return { averages: averagesByDay, pure: pureByDay };
+  }
+  async getOptimalCharge(hours: number): Promise<any> {
+    const fromDate = new Date();
+    const toDate = new Date(fromDate);
+    toDate.setDate(toDate.getDate() + 2);
+    const response = await fetch(
+      `https://api.carbonintensity.org.uk/generation/${fromDate.toISOString()}/${toDate.toISOString()}`,
+    );
+
+    if (!response.ok) {
+      return 'Error';
+    }
+
+    const responseData: ApiResponse = (await response.json()) as ApiResponse;
+
+    const intervalsNum = hours * 2;
+
+    const intervals: GenerationData[][] = [];
+
+    responseData.data.forEach((interval, index, array) => {
+      if (index + intervalsNum <= array.length) {
+        const intervalGroup = array.slice(index, index + intervalsNum);
+        intervals.push(intervalGroup);
+      }
+    });
+
+    const pureFuel = ['biomass', 'nuclear', 'hydro', 'wind', 'solar'];
+    let pureEnergyMax = 0;
+    let optimal: OptimalCharge = {
+      from: '',
+      to: '',
+      avgPure: 0,
+    };
+
+    intervals.forEach((interval) => {
+      let pureEnergy = 0;
+      const from = interval[0].from;
+      let to = interval[0].to;
+      interval.forEach((inter) => {
+        to = inter.to;
+        inter.generationmix.forEach((energy) => {
+          if (pureFuel.includes(energy.fuel)) pureEnergy += energy.perc;
+        });
+      });
+      pureEnergy /= intervalsNum;
+      if (pureEnergy > pureEnergyMax) {
+        pureEnergyMax = pureEnergy;
+        optimal = { from: from, to: to, avgPure: pureEnergy };
+      }
+    });
+
+    return optimal;
   }
 }

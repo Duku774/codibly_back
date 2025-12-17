@@ -29,3 +29,9 @@ export interface DayAverage {
   name: string;
   avg: number;
 }
+
+export interface OptimalCharge {
+  from: string;
+  to: string;
+  avgPure: number;
+}
